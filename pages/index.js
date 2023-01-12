@@ -12,6 +12,12 @@ export default function Home() {
   const [mnemonic, setMnemonic] = useState(null);
   const [account, setAccount] = useState(null);
   const [transactionSig, setTransactionSig] = useState("");
+  const [isPhrase, setIsPrase] = useState(false);
+  const [solAmout, setSolAmount] = useState(1.0);
+
+  const normalStyle = 'mt-1 p-4 border border-gray-300 bg-gray-200'; 
+  const inactiveStyle = `${normalStyle} text-gray-100`;
+  const style = isPhrase ? normalStyle : inactiveStyle;
 
   const generateWallet = () => {
     const generatedMnemonic = Bip39.generateMnemonic();
@@ -30,11 +36,12 @@ export default function Home() {
   const handleImport = (e) => {
     e.preventDefault();
     const inputMnemonic = e.target[0].value.trim().toLowerCase();
-    console.log('inputMnemonic', inputMnemonic);
+    console.log('inputMnemonic: ', inputMnemonic);
   
     const seed = Bip39.mnemonicToSeedSync(inputMnemonic).slice(0, 32);
-  
+    
     const importedAccount = Keypair.fromSeed(seed);
+  
     setAccount(importedAccount);
   };
 
@@ -54,10 +61,12 @@ export default function Home() {
 
   const handleAirdrop = async () => {
     try {
+      console.log("Airdrop starts.");
       const connection = new Connection(clusterApiUrl(NETWORK), "confirmed");
       const publicKey = account.publicKey;
+      
   
-      const confirmation = await connection.requestAirdrop(publicKey, LAMPORTS_PER_SOL);
+      const confirmation = await connection.requestAirdrop(publicKey, solAmout*1000000000);
       await connection.confirmTransaction(confirmation, "confirmed");
       await refreshBalance();
     } catch (error) {
@@ -109,6 +118,21 @@ export default function Home() {
       console.log('error', error);
     }
   };
+
+  const handleIsPhrase = () => {
+    setIsPrase(true);
+  }
+
+  const copyToClipboard = () => {
+    // コピー対象をJavaScript上で変数として定義する
+    var copyTarget = mnemonic;
+    navigator.clipboard.writeText(copyTarget);
+  }
+
+  const handleAmount = (e) => {
+    let amount = e.target.value;
+    setSolAmount(amount);
+  }
   
 
   return (
@@ -148,7 +172,23 @@ export default function Home() {
           </button>
           {mnemonic && (
             <>
-              <div className="mt-1 p-4 border border-gray-300 bg-gray-200">{mnemonic}</div>
+              <div className={style}>
+                {mnemonic}
+                <span>
+                  <button 
+                    className="p-2 my-6 ml-9 text-white bg-indigo-500 focus:ring focus:ring-indigo-300 rounded-lg cursor-pointer"
+                    onClick={handleIsPhrase}
+                  >
+                    see
+                  </button>
+                  <button 
+                    className="p-2 my-6 ml-9 text-white bg-indigo-500 focus:ring focus:ring-indigo-300 rounded-lg cursor-pointer"
+                    onClick={copyToClipboard}
+                  >
+                    copy
+                  </button>
+                </span>
+              </div>
               <strong className="text-xs">
                 このフレーズは秘密にして、安全に保管してください。このフレーズが漏洩すると、誰でもあなたの資産にアクセスできてしまいます。<br />
                 オンライン銀行口座のパスワードのようなものだと考えてください。
@@ -196,12 +236,21 @@ export default function Home() {
         <div>
           <h2 className="p-2 border-dotted border-l-4 border-l-indigo-400">STEP4: エアドロップ機能を実装する</h2>
           {account && (
-            <button
-              className="p-2 my-6 text-white bg-indigo-500 focus:ring focus:ring-indigo-300 rounded-lg cursor-pointer"
-              onClick={handleAirdrop}
-            >
-              Airdrop
-            </button>
+            <>
+              <button
+                className="p-2 my-6 text-white bg-indigo-500 focus:ring focus:ring-indigo-300 rounded-lg cursor-pointer"
+                onClick={handleAirdrop}
+              >
+                Airdrop
+              </button>
+              <input 
+                type="range" name="amount" min="0.0" max="1.0" step="0.1" 
+                className="p-2 my-6 ml-3 text-white bg-indigo-500 focus:ring focus:ring-indigo-300 rounded-lg cursor-pointer"
+                onChange={handleAmount}
+              > 
+              </input>
+              <p>{solAmout} SOL</p>
+            </>
           )}
         </div>
 
